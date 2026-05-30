@@ -507,7 +507,7 @@ CLEANUP_HOOK
 
 # 显示标题和分辨率选择
 echo -e "${CYAN}=============================================${RESET}"
-echo -e "${BLUE}        [···]J2ME 游戏画面适配工具[···]${RESET}"
+echo -e "${BLUE}        [J2ME 游戏画面适配工具]${RESET}"
 echo -e "${CYAN}=============================================${RESET}"
 
 # 先选择分辨率
@@ -614,7 +614,7 @@ fi
 
 # 计算总步骤数（内嵌 class 免编译/免 StripFrames/免 Patcher/免 preverify）
 if [ "${HOOK_MODE}" = "bg" ]; then
-    TOTAL_STEPS=5   # 解压+背景图+生成+编译+插桩+打包
+    TOTAL_STEPS=6   # 解压+背景图+生成+编译+插桩+打包
 else
     TOTAL_STEPS=5   # 解压+生成+编译+插桩+打包
 fi
@@ -722,10 +722,9 @@ else
     echo -e "      ${GREEN}[√] ResizeHook.java 生成成功${RESET}"
 fi
 
-# 步骤N: 编译插桩代码（含 CLDC/MIDP 标准库确保 J2ME 类引用完整）
+# 步骤N: 编译插桩代码（ResizeHook 是宿主机工具，JDK 21 默认编译即可）
 echo -e "${YELLOW}[${COMPILE_STEP}/${TOTAL_STEPS}] 编译插桩代码${RESET}"
-# ResizeHook 运行在宿主机（工具），--release 8 保证 JDK 8/17/21 均兼容
-javac -encoding UTF-8 --release 8 -cp "${CP_ALL}" ResizeHook.java
+javac -encoding UTF-8 -cp "${CP_ALL}" ResizeHook.java
 if [ "${HOOK_MODE}" = "bg" ]; then
     # ★ 内嵌预验证 ResizeBgHelper.class（base64）→ 免 JDK 编译/StripFrames/Patcher
     #   JDK 1.6.0_45 编译, target 1.4, Halo preverify.exe 处理 | v48.0 | CLDC StackMap
@@ -755,7 +754,7 @@ echo -e "${YELLOW}[${PACK_STEP}/${TOTAL_STEPS}] 打包并移动至目标路径${
 #   - 不需要 javac 编译 / StripFrames / ClassVersionPatcher / ProGuard / preverify
 
 cd "${TMP_DIR}"
-jar cfm "../${TMP_PACK}" META-INF/MANIFEST.MF .
+jar cfm0 "../${TMP_PACK}" META-INF/MANIFEST.MF .
 cd ..
 mv -f "${TMP_PACK}" "${FINAL_JAR}"
 
