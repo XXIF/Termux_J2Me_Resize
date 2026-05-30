@@ -12,7 +12,7 @@ WHITE="\033[37m"
 RESET="\033[0m"
 
 # 项目配置
-PROJECT_NAME="[·Termux J2ME 游戏画面适配工具·]"
+PROJECT_NAME="[···Termux J2ME 游戏画面适配工具···]"
 ASM_JAR="asm-4.0.jar"
 ASM_URL="https://repo1.maven.org/maven2/org/ow2/asm/asm/4.0/asm-4.0.jar"
 CLDC_JAR="cldcapi11.jar"

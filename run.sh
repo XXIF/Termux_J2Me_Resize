@@ -507,7 +507,7 @@ CLEANUP_HOOK
 
 # 显示标题和分辨率选择
 echo -e "${CYAN}=============================================${RESET}"
-echo -e "${BLUE}        [·J2ME 游戏画面适配工具·]${RESET}"
+echo -e "${BLUE}        [···J2ME 游戏画面适配工具···]${RESET}"
 echo -e "${CYAN}=============================================${RESET}"
 
 # 先选择分辨率
@@ -629,15 +629,21 @@ fi
         TMP_MASK="${TMP_DIR}/mask.png"
         TMP_BG_TMP="${TMP_DIR}/bg_tmp.png"
 
+        # ★ J2ME PNG 兼容标志:
+        #   -depth 8     → 8bit/通道（J2ME 不支持 16bit 深色）
+        #   -strip       → 去掉 iCCP/sRGB/gAMA 等高级 chunk（J2ME 解析会崩溃）
+        #   PNG32:       → RGBA 真彩+透明（J2ME 原生支持；避免 PNG8 调色板兼容问题）
+        J2ME_PNG="-depth 8 -strip -define png:color-type=6"
+        
         # 步骤1: 处理原图到目标屏幕尺寸
         magick "${BG_IMG_SRC}" \
                -resize ${SCREEN_W}x${SCREEN_H}^ \
                -gravity center \
                -extent ${SCREEN_W}x${SCREEN_H} \
-               PNG32:"${TMP_BG_RAW}"
+               ${J2ME_PNG} PNG32:"${TMP_BG_RAW}"
         
         # 步骤2: 创建透明画布
-        magick -size ${SCREEN_W}x${SCREEN_H} xc:transparent PNG32:"${TMP_BG_TMP}"
+        magick -size ${SCREEN_W}x${SCREEN_H} xc:transparent ${J2ME_PNG} PNG32:"${TMP_BG_TMP}"
         
         # 步骤3: 裁剪并保存每一块到临时文件
         TMP_TOP="${TMP_DIR}/bg_top.png"
@@ -646,25 +652,26 @@ fi
         TMP_RIGHT="${TMP_DIR}/bg_right.png"
         
         # 上边: SCREEN_W x GAME_Y
-        magick "${TMP_BG_RAW}" -crop ${SCREEN_W}x${GAME_Y}+0+0 +repage PNG32:"${TMP_TOP}"
+        magick "${TMP_BG_RAW}" -crop ${SCREEN_W}x${GAME_Y}+0+0 +repage ${J2ME_PNG} PNG32:"${TMP_TOP}"
         # 下边: SCREEN_W x (SCREEN_H - GAME_Y - GAME_H)
         BOTTOM_H=$((SCREEN_H - GAME_Y - GAME_H))
-        magick "${TMP_BG_RAW}" -crop ${SCREEN_W}x${BOTTOM_H}+0+$((GAME_Y+GAME_H)) +repage PNG32:"${TMP_BOTTOM}"
+        magick "${TMP_BG_RAW}" -crop ${SCREEN_W}x${BOTTOM_H}+0+$((GAME_Y+GAME_H)) +repage ${J2ME_PNG} PNG32:"${TMP_BOTTOM}"
         # 左边: GAME_X x GAME_H
-        magick "${TMP_BG_RAW}" -crop ${GAME_X}x${GAME_H}+0+${GAME_Y} +repage PNG32:"${TMP_LEFT}"
+        magick "${TMP_BG_RAW}" -crop ${GAME_X}x${GAME_H}+0+${GAME_Y} +repage ${J2ME_PNG} PNG32:"${TMP_LEFT}"
         # 右边: (SCREEN_W - GAME_X - GAME_W) x GAME_H
         RIGHT_W=$((SCREEN_W - GAME_X - GAME_W))
-        magick "${TMP_BG_RAW}" -crop ${RIGHT_W}x${GAME_H}+$((GAME_X+GAME_W))+${GAME_Y} +repage PNG32:"${TMP_RIGHT}"
+        magick "${TMP_BG_RAW}" -crop ${RIGHT_W}x${GAME_H}+$((GAME_X+GAME_W))+${GAME_Y} +repage ${J2ME_PNG} PNG32:"${TMP_RIGHT}"
         
         # 步骤4: 依次粘贴各块到透明画布（使用绝对坐标）
+        # 每次 composite 必须重新读取输入（避免 magick 内存中的旧像素覆盖）
         # 上边: SCREEN_W x GAME_Y @ (0,0)
-        magick "${TMP_BG_TMP}" "${TMP_TOP}" -geometry +0+0 -compose over -composite PNG32:"${TMP_BG_TMP}"
+        magick "${TMP_BG_TMP}" "${TMP_TOP}" -geometry +0+0 -compose over -composite ${J2ME_PNG} PNG32:"${TMP_BG_TMP}"
         # 下边: SCREEN_W x BOTTOM_H @ (0, GAME_Y+GAME_H)
-        magick "${TMP_BG_TMP}" "${TMP_BOTTOM}" -geometry +0+$((GAME_Y+GAME_H)) -compose over -composite PNG32:"${TMP_BG_TMP}"
+        magick "${TMP_BG_TMP}" "${TMP_BOTTOM}" -geometry +0+$((GAME_Y+GAME_H)) -compose over -composite ${J2ME_PNG} PNG32:"${TMP_BG_TMP}"
         # 左边: GAME_X x GAME_H @ (0, GAME_Y)
-        magick "${TMP_BG_TMP}" "${TMP_LEFT}" -geometry +0+${GAME_Y} -compose over -composite PNG32:"${TMP_BG_TMP}"
+        magick "${TMP_BG_TMP}" "${TMP_LEFT}" -geometry +0+${GAME_Y} -compose over -composite ${J2ME_PNG} PNG32:"${TMP_BG_TMP}"
         # 右边: RIGHT_W x GAME_H @ (GAME_X+GAME_W, GAME_Y)
-        magick "${TMP_BG_TMP}" "${TMP_RIGHT}" -geometry +$((GAME_X+GAME_W))+${GAME_Y} -compose over -composite PNG32:"${TMP_BG_TMP}"
+        magick "${TMP_BG_TMP}" "${TMP_RIGHT}" -geometry +$((GAME_X+GAME_W))+${GAME_Y} -compose over -composite ${J2ME_PNG} PNG32:"${TMP_BG_TMP}"
         
         # 清理临时文件
         rm -f "${TMP_BG_RAW}" "${TMP_TOP}" "${TMP_BOTTOM}" "${TMP_LEFT}" "${TMP_RIGHT}"
@@ -676,19 +683,19 @@ fi
     if [ "${FILE_SIZE}" -gt 15360 ]; then
         echo -e "      ${YELLOW}原始大小: $((FILE_SIZE / 1024))k, 开始压缩...${RESET}"
         
-        # 策略1: PNG32最大压缩
-        magick "${TMP_BG_TMP}" -define png:compression-level=9 PNG32:"${TMP_BG}"
+        # 策略1: PNG32最大压缩（保持RGBA，J2ME兼容）
+        magick "${TMP_BG_TMP}" -define png:compression-level=9 ${J2ME_PNG} PNG32:"${TMP_BG}"
         FILE_SIZE=$(stat -c%s "${TMP_BG}" 2>/dev/null || stat -f%z "${TMP_BG}" 2>/dev/null)
         
-        # 策略2: PNG8颜色量化（保持透明度）
+        # 策略2: 256色RGBA量化（非PNG8，保持真彩Alpha通道）
         if [ "${FILE_SIZE}" -gt 15360 ]; then
-            magick "${TMP_BG_TMP}" -colors 64 -define png:compression-level=9 PNG8:"${TMP_BG}"
+            magick "${TMP_BG_TMP}" -colors 256 -define png:compression-level=9 ${J2ME_PNG} PNG32:"${TMP_BG}"
             FILE_SIZE=$(stat -c%s "${TMP_BG}" 2>/dev/null || stat -f%z "${TMP_BG}" 2>/dev/null)
         fi
         
-        # 策略3: 更低颜色数
+        # 策略3: 128色RGBA量化
         if [ "${FILE_SIZE}" -gt 15360 ]; then
-            magick "${TMP_BG_TMP}" -colors 32 -define png:compression-level=9 PNG8:"${TMP_BG}"
+            magick "${TMP_BG_TMP}" -colors 128 -define png:compression-level=9 ${J2ME_PNG} PNG32:"${TMP_BG}"
             FILE_SIZE=$(stat -c%s "${TMP_BG}" 2>/dev/null || stat -f%z "${TMP_BG}" 2>/dev/null)
         fi
         
@@ -757,7 +764,9 @@ echo -e "${YELLOW}[${PACK_STEP}/${TOTAL_STEPS}] 打包并移动至目标路径${
 #   - 正常压缩 → 体积合理（不像 jar cfm0 无压缩暴涨）
 
 cd "${TMP_DIR}"
-zip -r -q "../${TMP_PACK}" .
+# ★ 用 find + zip -@ 替代 zip -r . → 仅打包文件（无目录条目），与 Python zipfile 行为一致
+#   避免目录条目 + Unix extra field 干扰老 J2ME 模拟器的 ZIP 解析
+find . -type f | zip -q "../${TMP_PACK}" -@
 cd ..
 mv -f "${TMP_PACK}" "${FINAL_JAR}"
 
