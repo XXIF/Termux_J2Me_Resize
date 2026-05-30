@@ -12,7 +12,7 @@ WHITE="\033[37m"
 RESET="\033[0m"
 
 # 项目配置
-PROJECT_NAME="=Termux J2ME 游戏画面适配工具="
+PROJECT_NAME="[·Termux J2ME 游戏画面适配工具·]"
 ASM_JAR="asm-4.0.jar"
 ASM_URL="https://repo1.maven.org/maven2/org/ow2/asm/asm/4.0/asm-4.0.jar"
 CLDC_JAR="cldcapi11.jar"
@@ -66,7 +66,7 @@ pkg update -y 2>/dev/null
 pkg upgrade -y 2>/dev/null
 
 echo -e "\n${YELLOW}[+] 安装基础工具${RESET}"
-pkg install wget unzip imagemagick -y 2>/dev/null
+pkg install wget unzip imagemagick zip -y 2>/dev/null
 echo -e "${GREEN}[√] 基础工具就绪${RESET}"
 
 # ========== OpenJDK 21 安装（Termux 原生 pkg） ==========

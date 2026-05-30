@@ -507,7 +507,7 @@ CLEANUP_HOOK
 
 # 显示标题和分辨率选择
 echo -e "${CYAN}=============================================${RESET}"
-echo -e "${BLUE}        [J2ME 游戏画面适配工具]${RESET}"
+echo -e "${BLUE}        [·J2ME 游戏画面适配工具·]${RESET}"
 echo -e "${CYAN}=============================================${RESET}"
 
 # 先选择分辨率
@@ -752,9 +752,12 @@ echo -e "${YELLOW}[${PACK_STEP}/${TOTAL_STEPS}] 打包并移动至目标路径${
 #   - v48.0 CLDC StackMap 属性，Halo preverify.exe 处理过
 #   - KEmulator / kemnnx64 / 老顽童: CLDC StackMap 可直接通过字节码验证 ✓
 #   - 不需要 javac 编译 / StripFrames / ClassVersionPatcher / ProGuard / preverify
+# ★ 打包使用系统 zip 命令（非 JDK jar）:
+#   - 标准 ZIP 格式，无 zip64 头 → 所有 J2ME 模拟器原生兼容
+#   - 正常压缩 → 体积合理（不像 jar cfm0 无压缩暴涨）
 
 cd "${TMP_DIR}"
-jar cfm0 "../${TMP_PACK}" META-INF/MANIFEST.MF .
+zip -r -q "../${TMP_PACK}" .
 cd ..
 mv -f "${TMP_PACK}" "${FINAL_JAR}"
 
